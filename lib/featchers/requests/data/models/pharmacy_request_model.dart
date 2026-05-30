@@ -18,6 +18,7 @@ class PharmacyRequestModel extends PharmacyRequestEntity {
     required super.licenseNumber,
     required super.nationalId,
     super.rejectionReason,
+    required super.isDeleted, // 🆕 تمرير الحقل الجديد للأب (Entity)
   });
 
   factory PharmacyRequestModel.fromJson(Map<String, dynamic> json) {
@@ -29,12 +30,14 @@ class PharmacyRequestModel extends PharmacyRequestEntity {
       phoneNumber: json['phoneNumber'] ?? '',
       address: json['address'] ?? '',
       licenseUrl: json['licenseUrl'] ?? '',
+      // 🆕 إذا لم يكن الحقل موجوداً في المستندات القديمة بقاعدة البيانات، نعتبره false تلقائياً
+      isDeleted: json['isDeleted'] ?? false, 
       status: RequestStatus.values.firstWhere(
-  // نقوم بمقارنة اسم الـ Enum مع النص القادم من قاعدة البيانات
-  (e) => e.name == (json['status']?.toString() ?? 'pending'),
-  // في حال كانت القيمة في قاعدة البيانات غير معروفة، نضعها pending كافتراضي
-  orElse: () => RequestStatus.pending,
-),
+        // نقوم بمقارنة اسم الـ Enum مع النص القادم من قاعدة البيانات
+        (e) => e.name == (json['status']?.toString() ?? 'pending'),
+        // في حال كانت القيمة في قاعدة البيانات غير معروفة، نضعها pending كافتراضي
+        orElse: () => RequestStatus.pending,
+      ),
       role: json['role'] ?? 'pharmacy',
       pharmacistName: json['pharmacistName'] ?? '',
       pharmacistId: json['pharmacistId'] ?? '',
@@ -62,6 +65,7 @@ class PharmacyRequestModel extends PharmacyRequestEntity {
       'createdAt': createdAt,
       'nationalId': nationalId,
       'rejectionReason': rejectionReason,
+      'isDeleted': isDeleted, // 🆕 حفظ حالة الحذف البرمجي في قاعدة البيانات
     };
   }
 
@@ -81,6 +85,7 @@ class PharmacyRequestModel extends PharmacyRequestEntity {
       licenseNumber: entity.licenseNumber,
       nationalId: entity.nationalId,
       rejectionReason: entity.rejectionReason,
+      isDeleted: entity.isDeleted, // 🆕 تحويل الحقل من الـ Entity للـ Model
     );
   }
 }

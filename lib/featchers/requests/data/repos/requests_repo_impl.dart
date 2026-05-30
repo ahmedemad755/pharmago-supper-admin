@@ -5,6 +5,8 @@ import '../../../../core/errors/faliur.dart';
 import '../../../../core/services/database_service.dart';
 import '../../domain/entities/pharmacy_request_entity.dart';
 import '../../domain/repos/requests_repo.dart';
+// تأكد من عمل Import للـ PharmacyRequestModel عشان الفلترة الذكية
+import '../../data/models/pharmacy_request_model.dart'; 
 
 class PharmaciesRepoImpl implements PharmaciesRepo {
   final DatabaseService _dataService;
@@ -13,14 +15,20 @@ class PharmaciesRepoImpl implements PharmaciesRepo {
   @override
   Stream<Either<Faliur, List<PharmacyRequestEntity>>> fetchRequests() {
     return _dataService.getDataStream(
-      path: BackendPoints.pharmacies, // نأتي بكل طلبات الصيدليات
+      path: BackendPoints.pharmacies, 
     ).map((snapshot) {
       try {
         final List<dynamic> data = snapshot as List<dynamic>;
-final List<PharmacyRequestEntity> requests = data.map((e) {
-  // تأكد أن التحويل يتم عبر الـ Model أو الـ Entity الذي يحتوي على منطق الـ Enum الجديد
-  return PharmacyRequestEntity.fromJson(Map<String, dynamic>.from(e));
-}).toList();
+        
+        final List<PharmacyRequestEntity> requests = data
+            .map((e) {
+              // 1️⃣ تحويل الداتا أولاً باستخدام الـ Model اللي بيدعم حقل isDeleted
+              return PharmacyRequestModel.fromJson(Map<String, dynamic>.from(e));
+            })
+            // 2️⃣ 🔥 الفلترة السحرية: استبعاد أي صيدلية حقل isDeleted فيها بيساوي true
+            .where((request) => request.isDeleted == false) 
+            .toList();
+
         return Right(requests);
       } catch (e) {
         return Left(ServerFaliur('حدث خطأ أثناء معالجة البيانات: $e'));

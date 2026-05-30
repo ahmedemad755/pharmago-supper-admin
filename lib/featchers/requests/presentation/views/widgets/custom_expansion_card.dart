@@ -1,4 +1,3 @@
-// lib/featchers/requests/presentation/views/widgets/custom_expansion_card.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:supper_admin/core/enum/request_enum.dart';
@@ -27,9 +26,23 @@ class CustomerExpansionCard extends StatelessWidget {
           backgroundColor: _getStatusColor(request.status).withOpacity(0.1),
           child: Icon(Icons.local_pharmacy, color: _getStatusColor(request.status)),
         ),
-        title: Text(
-          request.pharmacyName,
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Expanded(
+              child: Text(
+                request.pharmacyName,
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+            ),
+            // 🗑️ زر الحذف البرمجي (يظهر في الحالات المبتوت فيها لتنظيف الواجهة)
+            if (request.status == RequestStatus.approved || request.status == RequestStatus.rejected)
+              IconButton(
+                icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 22),
+                tooltip: 'حذف الطلب نهائياً',
+                onPressed: () => _showDeleteConfirmationDialog(context),
+              ),
+          ],
         ),
         subtitle: _buildStatusBadge(request.status),
         children: [
@@ -46,63 +59,97 @@ class CustomerExpansionCard extends StatelessWidget {
                 _buildInfoRow(Icons.location_on, 'العنوان', request.address),
                 _buildInfoRow(Icons.badge, 'رقم الهوية', request.nationalId),
                 _buildInfoRow(Icons.description, 'رقم الرخصة', request.licenseNumber),
-                // --- بداية قسم سبب الرفض ---
-      if (request.status == RequestStatus.rejected && request.rejectionReason != null) ...[
-        const SizedBox(height: 15),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Colors.red.shade50,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.red.withOpacity(0.2)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(Icons.report_problem_outlined, size: 18, color: Colors.red.shade800),
-                  const SizedBox(width: 8),
-                  Text(
-                    'سبب الرفض المسجل:',
-                    style: TextStyle(
-                      color: Colors.red.shade800,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13,
+                
+                if (request.status == RequestStatus.rejected && request.rejectionReason != null) ...[
+                  const SizedBox(height: 15),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.red.withOpacity(0.2)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.report_problem_outlined, size: 18, color: Colors.red.shade800),
+                            const SizedBox(width: 8),
+                            Text(
+                              'سبب الرفض المسجل:',
+                              style: TextStyle(
+                                color: Colors.red.shade800,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 5),
+                        Text(
+                          request.rejectionReason!,
+                          style: TextStyle(color: Colors.red.shade900, fontSize: 14),
+                        ),
+                      ],
                     ),
                   ),
                 ],
-              ),
-              const SizedBox(height: 5),
-              Text(
-                request.rejectionReason!,
-                style: TextStyle(color: Colors.red.shade900, fontSize: 14),
-              ),
-            ],
-          ),
-        ),
-      ],
-      // --- نهاية قسم سبب الرفض ---
 
-      const SizedBox(height: 20),
-      _buildSectionTitle('وثيقة الترخيص'),
-      const SizedBox(height: 10),
-      _buildLicenseImage(context),
-      
-      const SizedBox(height: 25),
-      _buildSectionTitle('تغيير حالة الطلب'),
-      const SizedBox(height: 12),
-      _buildActionButtons(context),
-    ],
-  ),
-),
+                const SizedBox(height: 20),
+                _buildSectionTitle('وثيقة الترخيص'),
+                const SizedBox(height: 10),
+                _buildLicenseImage(context),
+                
+                const SizedBox(height: 25),
+                _buildSectionTitle('تغيير حالة الطلب'),
+                const SizedBox(height: 12),
+                _buildActionButtons(context),
+              ],
+            ),
+          ),
         ],
       ),
     );
   }
 
-  // --- مساعدات الـ UI ---
+  // --- واجهة الحذف التأكيدي الحامية للداتا ---
+  void _showDeleteConfirmationDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Colors.redAccent),
+            SizedBox(width: 8),
+            Text('تأكيد حذف الطلب'),
+          ],
+        ),
+        content: Text('هل أنت متأكد من مسح طلب صيدلية "${request.pharmacyName}" تماماً؟ لن يظهر هذا الطلب في لوحة التحكم مرة أخرى.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('إلغاء'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              context.read<RequestsCubit>().deleteRequestPermanently(request.uId);
+              Navigator.pop(dialogContext);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('تم مسح طلب ${request.pharmacyName} بنجاح')),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('تأكيد المسح'),
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _buildSectionTitle(String title) {
     return Text(
@@ -166,13 +213,11 @@ class CustomerExpansionCard extends StatelessWidget {
     );
   }
 
-  // --- تعديل الأزرار لتظهر دائماً ---
   Widget _buildActionButtons(BuildContext context) {
     return Column(
       children: [
         Row(
           children: [
-            // زر القبول
             _StatusActionButton(
               label: 'قبول',
               icon: Icons.check_circle,
@@ -181,7 +226,6 @@ class CustomerExpansionCard extends StatelessWidget {
               onPressed: () => _confirmAction(context, RequestStatus.approved),
             ),
             const SizedBox(width: 8),
-            // زر الرفض
             _StatusActionButton(
               label: 'رفض',
               icon: Icons.cancel,
@@ -192,7 +236,6 @@ class CustomerExpansionCard extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 8),
-        // زر الإرجاع للانتظار (في حال أراد الأدمن التراجع عن قراره)
         _StatusActionButton(
           label: 'إرجاع لقيد الانتظار',
           icon: Icons.hourglass_empty,
@@ -214,7 +257,7 @@ class CustomerExpansionCard extends StatelessWidget {
     }
   }
 
-void _confirmAction(BuildContext context, RequestStatus newStatus) {
+  void _confirmAction(BuildContext context, RequestStatus newStatus) {
     if (request.status == newStatus) return;
 
     final TextEditingController reasonController = TextEditingController();
@@ -260,7 +303,6 @@ void _confirmAction(BuildContext context, RequestStatus newStatus) {
             onPressed: () {
               if (newStatus == RequestStatus.rejected) {
                 if (formKey.currentState!.validate()) {
-                  // نمرر السبب هنا مع الحالة
                   context.read<RequestsCubit>().updateStatus(
                     request.uId, 
                     newStatus, 
@@ -308,7 +350,6 @@ void _confirmAction(BuildContext context, RequestStatus newStatus) {
   }
 }
 
-// كلاس مساعد للأزرار لتقليل تكرار الكود
 class _StatusActionButton extends StatelessWidget {
   final String label;
   final IconData icon;
@@ -329,8 +370,8 @@ class _StatusActionButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final button = isSelected 
-      ? ElevatedButton.icon( // شكل الزر إذا كان مختاراً
-          onPressed: null, // تعطيل الضغط لأنه مختار بالفعل
+      ? ElevatedButton.icon(
+          onPressed: null,
           icon: Icon(icon, size: 18),
           label: Text(label),
           style: ElevatedButton.styleFrom(
@@ -340,7 +381,7 @@ class _StatusActionButton extends StatelessWidget {
             disabledForegroundColor: Colors.white,
           ),
         )
-      : OutlinedButton.icon( // شكل الزر إذا لم يكن مختاراً
+      : OutlinedButton.icon(
           onPressed: onPressed,
           icon: Icon(icon, size: 18),
           label: Text(label),

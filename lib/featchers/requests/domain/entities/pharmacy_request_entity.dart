@@ -17,6 +17,7 @@ class PharmacyRequestEntity {
   final String licenseNumber;
   final String nationalId;
   final String? rejectionReason;
+  final bool isDeleted;
 
   PharmacyRequestEntity({
     required this.uId,
@@ -33,6 +34,7 @@ class PharmacyRequestEntity {
     required this.licenseNumber,
     required this.nationalId,
     this.rejectionReason,
+    this.isDeleted = false,
   });
   // إضافة هذه الدالة لتحويل البيانات من Firestore
   factory PharmacyRequestEntity.fromJson(Map<String, dynamic> json) {
